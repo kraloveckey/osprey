@@ -1,0 +1,23 @@
+[package]
+name = "osprey"
+version = "1.0.0"
+edition = "2021"
+authors = ["kraloveckey"]
+license = "MIT"
+description = "High-precision storage S.M.A.R.T. telemetry, SSD wear tracking, and battery health monitor for macOS and Linux"
+repository = "https://github.com/kraloveckey/osprey"
+
+[dependencies]
+tokio = { version = "1.40", features = ["full"] }
+axum = { version = "0.7", features = ["json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+colored = "2.1"
+sysinfo = "0.31"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

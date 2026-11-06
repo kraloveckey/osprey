@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Osprey – Hardware Telemetry &amp; System Monitor</title>
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+  <div class="hud-wrapper">
+    <!-- Osprey Floating Desktop HUD / Widget -->
+    <div class="hud-card" id="hudCard">
+      <!-- Top Title & Control Bar -->
+      <div class="hud-header">
+        <div class="hud-brand">
+          <img src="/assets/logo.png" alt="Osprey Logo" class="hud-logo-img" id="hudLogo">
+          <div class="brand-text">
+            <span class="hud-title">Osprey</span>
+            <span class="hud-badge">HUD</span>
+          </div>
+          <span class="pulse-indicator" title="Live Hardware Polling"></span>
+        </div>
+
+        <div class="hud-controls">
+          <!-- Size Presets: S, M, L -->
+          <div class="size-switch" title="Widget Size Preset">
+            <button class="size-btn" data-size="s" id="btnSizeS" title="Small (CPU & Memory)">S</button>
+            <button class="size-btn active" data-size="m" id="btnSizeM" title="Medium (CPU, Memory, Disk, Power)">M</button>
+            <button class="size-btn" data-size="l" id="btnSizeL" title="Large (All Sections & Processes)">L</button>
+          </div>
+
+          <!-- History Scrub Toggle -->
+          <div class="history-switch" title="Live / History Range">
+            <button class="hist-btn active" data-range="live" id="btnRangeLive">Live</button>
+            <button class="hist-btn" data-range="1h" id="btnRange1h">1h</button>
+            <button class="hist-btn" data-range="4h" id="btnRange4h">4h</button>
+          </div>
+
+          <!-- Inspect SMART Modal Button -->
+          <button class="ctrl-icon-btn" id="btnOpenSmart" title="Inspect Physical S.M.A.R.T. NVMe/ATA Telemetry">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </button>
+
+          <!-- Export Report Button -->
+          <button class="ctrl-icon-btn" id="btnExport" title="Export Diagnostics Text Report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </button>
+
+          <!-- Pin / Lock Position -->
+          <button class="ctrl-icon-btn" id="btnLock" title="Lock Widget Position">
+            <svg id="iconUnlock" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>
+            <svg id="iconLock" class="hidden" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          </button>
+
+          <!-- Theme Toggle -->
+          <button class="ctrl-icon-btn" id="btnThemeToggle" title="Toggle Dark/Light/OLED Theme">
+            <svg id="iconSun" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg id="iconMoon" class="hidden" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- System Health Banner (System Health Banner Header) -->
+      <div class="hud-vitals-banner">
+        <span class="vital-tag health">Health <span class="dot-indicator" id="healthDot">●</span> <strong id="healthScoreVal">100</strong></span>
+        <span class="vital-sep">·</span>
+        <span class="vital-tag chip" id="chipNameVal">Apple Silicon</span>
+        <span class="vital-sep">·</span>
+        <span class="vital-tag ram" id="memSummaryVal">24.0 GB</span>
+        <span class="vital-sep">·</span>
+        <span class="vital-tag os" id="osVal">macOS</span>
+        <span class="vital-sep">·</span>
+        <span class="vital-tag uptime" id="uptimeVal">up 6d 16h</span>
+        <span class="vital-sep">·</span>
+        <button class="advisory-badge-btn hidden" id="advisoryBadgeBtn" title="View Reboot & Maintenance Advisory">
+          <span class="adv-icon">⚠️</span> <span id="advisoryBadgeText">Reboot Advised</span>
+        </button>
+      </div>
+
+      <!-- Main Dynamic Grid -->
+      <div class="hud-grid" id="hudGrid">
+        <!-- Section 1: CPU -->
+        <div class="hud-section" id="secCpu" data-section="cpu">
+          <div class="section-title-row clickable" id="cpuTitleRow" title="Click to open Activity Monitor">
+            <span class="sec-label">◉ CPU</span>
+            <span class="sec-sub" id="cpuTempBadge">--°C</span>
+          </div>
+
+
+          <div class="metric-row">
+            <span class="row-label">Total</span>
+            <div class="bar-track">
+              <div class="bar-fill" id="cpuTotalBar" style="width: 25%;"></div>
+            </div>
+            <span class="row-val" id="cpuTotalVal">25.0%</span>
+          </div>
+
+          <div id="cpuCoresContainer">
+            <!-- Dynamic Cores -->
+          </div>
+
+          <div class="text-row">
+            <span class="dim">Load</span>
+            <span class="val" id="cpuLoadVal">1.80 / 1.50 / 1.40</span>
+          </div>
+
+          <div class="spark-row">
+            <span class="dim">Trend</span>
+            <canvas id="cpuSparkCanvas" class="spark-canvas" width="180" height="22"></canvas>
+          </div>
+        </div>
+
+        <!-- Section 2: Memory -->
+        <div class="hud-section" id="secMemory" data-section="memory">
+          <div class="section-title-row clickable" id="memTitleRow" title="Click to open Activity Monitor">
+            <span class="sec-label">▥ Memory</span>
+            <span class="sec-sub" id="memUsedPctBadge">76%</span>
+          </div>
+
+
+          <div class="metric-row">
+            <span class="row-label">Used</span>
+            <div class="bar-track">
+              <div class="bar-fill" id="memUsedBar" style="width: 76%;"></div>
+            </div>
+            <span class="row-val" id="memUsedVal">76.0%</span>
+          </div>
+
+          <div class="metric-row">
+            <span class="row-label">Free</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-green" id="memFreeBar" style="width: 24%;"></div>
+            </div>
+            <span class="row-val" id="memFreeVal">24.0%</span>
+          </div>
+
+          <div class="text-row">
+            <span class="dim">Total</span>
+            <span class="val" id="memTotalLine">18.3 GB / 24.0 GB</span>
+          </div>
+          <div class="text-row">
+            <span class="dim">Cached</span>
+            <span class="val" id="memCachedLine">5.6 GB</span>
+          </div>
+          <div class="text-row">
+            <span class="dim">Avail</span>
+            <span class="val" id="memAvailLine">5.7 GB</span>
+          </div>
+        </div>
+
+        <!-- Section 3: Disk (Storage & S.M.A.R.T.) -->
+        <div class="hud-section" id="secDisk" data-section="disk">
+          <div class="section-title-row clickable" id="diskTitleRow" title="Click to view S.M.A.R.T. Telemetry">
+            <span class="sec-label">▦ Disk</span>
+            <span class="sec-badge green" id="diskSmartBadge">GOOD 100%</span>
+            <span class="sec-sub" id="diskTempBadge">34°C</span>
+          </div>
+
+          <div class="metric-row">
+            <span class="row-label">Usage</span>
+            <div class="bar-track">
+              <div class="bar-fill" id="diskUsageBar" style="width: 81%;"></div>
+            </div>
+            <span class="row-val" id="diskUsageVal">81.8%</span>
+          </div>
+
+          <div class="text-row">
+            <span class="dim">Total</span>
+            <span class="val" id="diskTotalLine">926.3 GB · APFS</span>
+          </div>
+          <div class="text-row">
+            <span class="dim">Space</span>
+            <span class="val" id="diskSpaceLine">757.5 GB used · 168.8 GB free</span>
+          </div>
+          <div class="text-row">
+            <span class="dim">Speed</span>
+            <span class="val" id="diskSpeedLine">Read: 4.7 MB/s · Write: 3.1 MB/s</span>
+          </div>
+          <div class="text-row smart-hint">
+            <span class="dim">NVMe</span>
+            <span class="val highlight clickable" id="diskSmartQuickLink">APPLE SSD AP1024Z →</span>
+          </div>
+        </div>
+
+        <!-- Section 4: Power / Battery -->
+        <div class="hud-section" id="secPower" data-section="power">
+          <div class="section-title-row">
+            <span class="sec-label">◪ Power</span>
+            <span class="sec-badge green" id="battHealthBadge">100.5%</span>
+            <span class="sec-sub" id="battWattsBadge">30W</span>
+          </div>
+
+          <div class="metric-row">
+            <span class="row-label">Level</span>
+            <div class="bar-track">
+              <div class="bar-fill" id="battLevelBar" style="width: 80%;"></div>
+            </div>
+            <span class="row-val" id="battLevelVal">80%</span>
+          </div>
+
+          <div class="metric-row">
+            <span class="row-label">Health</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-green" id="battHealthMeterBar" style="width: 100%;"></div>
+            </div>
+            <span class="row-val" id="battHealthMeterVal">100.5%</span>
+          </div>
+
+          <div class="text-row">
+            <span class="dim">Status</span>
+            <span class="val" id="battStatusLine">AC Power (Idle)</span>
+          </div>
+          <div class="text-row">
+            <span class="dim">Battery</span>
+            <span class="val" id="battDetailLine">8 cycles · 32.1°C</span>
+          </div>
+        </div>
+
+        <!-- Section 5: Network -->
+        <div class="hud-section" id="secNetwork" data-section="network">
+          <div class="section-title-row">
+            <span class="sec-label">⇅ Network</span>
+            <span class="sec-sub" id="netIfaceBadge">en0</span>
+          </div>
+
+          <div class="spark-row">
+            <span class="spark-label accent-down">Down</span>
+            <canvas id="netDownCanvas" class="spark-canvas" width="130" height="20"></canvas>
+            <span class="spark-val" id="netDownVal">142 KB/s</span>
+          </div>
+
+          <div class="spark-row">
+            <span class="spark-label accent-up">Up</span>
+            <canvas id="netUpCanvas" class="spark-canvas" width="130" height="20"></canvas>
+            <span class="spark-val" id="netUpVal">32 KB/s</span>
+          </div>
+
+          <div class="text-row">
+            <span class="dim">Iface</span>
+            <span class="val" id="netIfaceLine">en0 · 10.10.14.25</span>
+          </div>
+        </div>
+
+        <!-- Section 6: Processes -->
+        <div class="hud-section" id="secProcesses" data-section="processes">
+          <div class="section-title-row">
+            <span class="sec-label">≡ Processes</span>
+            <span class="sec-header-right"><span class="col-head">CPU</span><span class="col-head">RAM</span></span>
+          </div>
+
+          <div class="process-list" id="processList">
+            <!-- Dynamic Process Rows -->
+          </div>
+        </div>
+      </div>
+
+      <!-- History Scrubber Bar (Visible in History Mode) -->
+      <div class="hud-history-drawer hidden" id="historyDrawer">
+        <div class="history-controls">
+          <span class="hist-label">History Range</span>
+          <input type="range" min="0" max="100" value="100" class="history-slider" id="historySlider">
+          <span class="hist-time" id="historyTimeVal">Now</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Physical S.M.A.R.T. Inspector Modal -->
+  <div class="modal-overlay hidden" id="smartModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-brand">
+          <img src="/assets/logo.png" class="modal-logo" alt="Logo">
+          <h3>S.M.A.R.T. Storage Telemetry</h3>
+        </div>
+        <button class="modal-close" id="btnCloseSmart">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="drive-selector-bar" id="driveSelectorBar"></div>
+
+        <div class="smart-card">
+          <div class="smart-hero">
+            <div class="smart-badge-box">
+              <span class="smart-badge-state" id="modalSmartState">GOOD</span>
+              <span class="smart-badge-pct" id="modalSmartPct">100%</span>
+            </div>
+            <div class="smart-summary-details">
+              <h4 id="modalDriveModel">APPLE SSD AP1024Z</h4>
+              <p><span class="dim">Protocol:</span> <strong id="modalDriveProto">Apple Fabric NVMe</strong> &nbsp;·&nbsp; <span class="dim">Size:</span> <strong id="modalDriveSize">931.8 GB</strong> &nbsp;·&nbsp; <span class="dim">Temp:</span> <strong id="modalDriveTemp">34°C</strong></p>
+              <p><span class="dim">TBW Written:</span> <span id="modalDriveTbw">9.3 TB</span> &nbsp;·&nbsp; <span class="dim">Reads:</span> <span id="modalDriveReads">20.2 TB</span> &nbsp;·&nbsp; <span class="dim">Power-On:</span> <span id="modalDriveHours">333 hours</span></p>
+            </div>
+          </div>
+
+          <div class="smart-table-wrap">
+            <table class="smart-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>ATTRIBUTE NAME</th>
+                  <th>CURRENT</th>
+                  <th>WORST</th>
+                  <th>THRESH</th>
+                  <th>RAW VALUES</th>
+                  <th>STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="modalSmartTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CrystalDiskInfo Text Report Modal -->
+  <div class="modal-overlay hidden" id="reportModal">
+    <div class="modal-dialog report-dialog">
+      <div class="modal-header">
+        <div class="modal-brand">
+          <img src="/assets/logo.png" class="modal-logo" alt="Logo">
+          <h3>Standardized Hardware Diagnostics Report</h3>
+        </div>
+        <button class="modal-close" id="btnCloseReport">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="report-actions">
+          <button class="action-btn" id="btnCopyReport">Copy to Clipboard</button>
+          <span class="copy-notice" id="copyNotice">Copied!</span>
+        </div>
+  <!-- Maintenance & Reboot Advisory Modal -->
+  <div class="modal-overlay hidden" id="advisoryModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-brand">
+          <img src="/assets/logo.png" class="modal-logo" alt="Logo">
+          <h3>System Degradation &amp; Reboot Advisory</h3>
+        </div>
+        <button class="modal-close" id="btnCloseAdvisory">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="advisory-hero" id="advisoryHero">
+          <div class="advisory-badge-box" id="advisoryBadgeBox">
+            <span class="advisory-badge-level" id="advisoryLevel">ADVISORY</span>
+            <span class="advisory-badge-score" id="advisoryScore">65</span>
+          </div>
+          <div class="advisory-summary-details">
+            <h4 id="advisorySummaryHeading">Reboot Recommended</h4>
+            <p id="advisorySummaryText">12.2 GB swap paged to SSD. Restarting will purge virtual memory paging files and restore maximum performance.</p>
+            <div class="advisory-stats-grid">
+              <div><span class="dim">Swap Accumulated:</span> <strong id="advisorySwapVal">12.2 GB</strong></div>
+              <div><span class="dim">System Uptime:</span> <strong id="advisoryUptimeVal">7d 1h</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="triggers-list-wrap">
+          <h4>Detected Performance Bottlenecks</h4>
+          <div class="triggers-list" id="triggersList"></div>
+        </div>
+
+        <div class="advisory-action-bar">
+          <button class="action-btn" id="btnSendNotification">Send macOS Notification</button>
+          <button class="action-btn secondary" id="btnLaunchActivityMonitor">Open Activity Monitor</button>
+          <span class="notify-notice" id="notifyNotice">Notification Sent!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
+

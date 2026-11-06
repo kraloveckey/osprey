@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  verify-version:
+    name: Verify tag matches Cargo.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare versions
+        run: |
+          CARGO_VERSION="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          if [ "v${CARGO_VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match Cargo.toml version ${CARGO_VERSION}"
+            exit 1
+          fi
+
+  build-macos:
+    name: Build macOS (CLI arm64 + x86_64, Osprey.app)
+    needs: verify-version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build CLI
+        run: |
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+
+      # Each archive holds a single binary named `osprey` – the README
+      # one-liners and the Homebrew formula (`bin.install "osprey"`) rely on it.
+      - name: Package CLI
+        run: |
+          for pair in aarch64-apple-darwin:arm64 x86_64-apple-darwin:x86_64; do
+            target="${pair%%:*}"; arch="${pair##*:}"
+            mkdir -p "pkg-$arch"
+            cp "target/$target/release/osprey" "pkg-$arch/osprey"
+            tar -czf "osprey-macos-$arch.tar.gz" -C "pkg-$arch" osprey
+          done
+
+      - name: Build and package Osprey.app
+        run: |
+          chmod +x scripts/bundle_app.sh
+          ./scripts/bundle_app.sh
+          (cd dist && ditto -c -k --keepParent Osprey.app ../Osprey-macOS-arm64.zip)
+
+      - name: Checksums
+        run: shasum -a 256 osprey-macos-*.tar.gz Osprey-macOS-arm64.zip > SHA256SUMS-macos.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          overwrite_files: true
+          files: |
+            osprey-macos-arm64.tar.gz
+            osprey-macos-x86_64.tar.gz
+            Osprey-macOS-arm64.zip
+            SHA256SUMS-macos.txt
+          fail_on_unmatched_files: true
+
+  build-linux:
+    name: Build Linux (${{ matrix.arch }})
+    needs: verify-version
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04      # older glibc = runs on more distros
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: cargo test --release
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Smoke test
+        run: |
+          ./target/release/osprey --version
+          ./target/release/osprey scan
+          ./target/release/osprey json > /dev/null
+
+      - name: Package
+        run: |
+          mkdir -p pkg
+          cp target/release/osprey pkg/osprey
+          tar -czf "osprey-linux-${{ matrix.arch }}.tar.gz" -C pkg osprey
+          sha256sum "osprey-linux-${{ matrix.arch }}.tar.gz" > "SHA256SUMS-linux-${{ matrix.arch }}.txt"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          overwrite_files: true
+          files: |
+            osprey-linux-${{ matrix.arch }}.tar.gz
+            SHA256SUMS-linux-${{ matrix.arch }}.txt
+          fail_on_unmatched_files: true

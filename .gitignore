@@ -1,0 +1,12 @@
+/target
+/dist
+/.build
+macos/.build
+/release-assets
+**/*.rs.bk
+*.DS_Store
+*.swp
+*.log
+
+
+
